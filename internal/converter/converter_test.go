@@ -111,3 +111,66 @@ func TestErreurYAMLInvalide(t *testing.T) {
 	// On vérifie que le résultat est bien vide en cas d'erreur
 	assert.Nil(t, resultBytes)
 }
+
+// 7. Le "Boss Final" : Un YAML massif et extrêmement complexe
+func TestYAMLComplexe(t *testing.T) {
+	// Un YAML digne d'une vraie configuration d'infrastructure cloud complexe
+	inputYAML := `
+projet: "mega-infrastructure"
+version: 3.5
+actif: true
+
+parametres:
+  environnement: "production"
+  tags: ["backend", "critique"]
+  quota:
+    cpu: 128
+    ram_gb: 512
+
+serveurs:
+  - nom: "web-01"
+    ip: "10.0.0.10"
+    roles: ["nginx", "frontend"]
+  - nom: "db-01"
+    ip: "10.0.0.20"
+    roles: ["postgres"]
+    master: true
+
+divers: ["texte", 42, false, {"sous_cle": "sous_valeur"}]
+`
+
+	// Le résultat HCL attendu, avec toutes les clés triées par ordre alphabétique
+	// hclwrite gère automatiquement l'indentation et l'alignement des signes '='
+	expectedHCL := `actif = true
+divers = ["texte", 42, false, {
+  sous_cle = "sous_valeur"
+}]
+parametres = {
+  environnement = "production"
+  quota = {
+    cpu    = 128
+    ram_gb = 512
+  }
+  tags = ["backend", "critique"]
+}
+projet = "mega-infrastructure"
+serveurs = [{
+  ip    = "10.0.0.10"
+  nom   = "web-01"
+  roles = ["nginx", "frontend"]
+  }, {
+  ip     = "10.0.0.20"
+  master = true
+  nom    = "db-01"
+  roles  = ["postgres"]
+}]
+version = 3.5
+`
+
+	// Exécution
+	resultBytes, err := ToHCL2([]byte(inputYAML))
+
+	// Assertions
+	assert.NoError(t, err, "Le programme n'aurait pas dû planter sur ce gros YAML")
+	assert.Equal(t, strings.TrimSpace(expectedHCL), strings.TrimSpace(string(resultBytes)), "Le HCL généré ne correspond pas au format attendu")
+}

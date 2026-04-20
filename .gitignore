@@ -1,0 +1,23 @@
+# Binaires et exécutables
+main
+yaml2hcl
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Fichiers de sortie de test
+output.hcl
+
+# Dépendances (peuvent être reconstruites via go.mod)
+vendor/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers de configuration IDE
+.vscode/
+.idea/
+*.swp

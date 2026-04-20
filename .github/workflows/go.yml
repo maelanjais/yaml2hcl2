@@ -35,3 +35,6 @@ jobs:
     # 5. Exécution de tous tes tests unitaires (C'est l'étape la plus importante !)
     - name: Tests Unitaires
       run: go test -v ./...
+
+    - name: Vérification de la syntaxe HCL
+      run: terraform fmt -check output.hcl

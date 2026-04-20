@@ -1,87 +1,69 @@
-# ===================================================================
-# Fichier de test de stress pour convertisseur YAML -> HCL2
-# ===================================================================
+# 1. Métadonnées et types primitifs
+infrastructure_id: "infra-prod-2024"
+deprecated: false
+scaling_factor: 1.25
+max_retries: 5
+api_endpoint: null
 
-titre_projet: "infrastructure-globale"
-version_config: 4.2
-mode_strict: true
-valeur_nulle: null
-chaine_vide: ""
+# 2. Profondeur de récursion (Niveau 5+)
+architecture:
+  couche_1:
+    couche_2:
+      couche_3:
+        couche_4:
+          couche_5:
+            identifiant: "profondeur-maximale"
+            valide: true
 
-# 1. Dictionnaire contenant des primitives
-parametres_globaux:
-  timeout_secondes: 30
-  taux_erreurs_max: 0.05
-  region_principale: "eu-west-3"
-  multi_zones: true
+# 3. Collections hétérogènes (Tuples mixtes)
+# Test de la capacité à gérer des types différents dans une même liste
+donnees_mixtes:
+  - "chaine"
+  - 100
+  - 45.5
+  - false
+  - { sous_objet: "valeur" }
+  - [1, 2, 3]
 
-# 2. Listes et tuples (Homogènes et Hétérogènes)
-serveurs_dns:
-  - "1.1.1.1"
-  - "8.8.8.8"
-ports_ouverts: [80, 443, 22]
-tuple_de_stress: ["chaine", 42, 3.14, false]
+# 4. Structures vides et limites
+cas_limites:
+  liste_vide: []
+  objet_vide: {}
+  chaine_vide: ""
+  zeros: 0
 
-# 3. Structures vides (Cas limites)
-liste_vide: []
-objet_vide: {}
+# 5. Liste massive d'objets (Stress test d'itération)
+clusters_regionaux:
+  - nom: "europe-west"
+    zones: ["a", "b", "c"]
+    noeuds: 12
+    metadata:
+      env: "prod"
+      cost_center: 1024
+  - nom: "us-east"
+    zones: ["a"]
+    noeuds: 4
+    metadata:
+      env: "dev"
+      cost_center: 512
 
-# 4. Imbrication profonde (Objets dans Objets)
-cluster_kubernetes:
-  nom: "k8s-prod"
-  version: "1.28.2"
-  haute_disponibilite: true
-  nœuds:
-    controle:
-      quantite: 3
-      type_instance: "t3.medium"
-      labels:
-        role: "master"
-        environnement: "production"
-    travailleurs:
-      quantite_min: 5
-      quantite_max: 20
-      type_instance: "m5.large"
-      labels:
-        role: "worker"
-        gpu_accelere: false
+# 6. Caractères spéciaux et Clés complexes
+# Test de la gestion des identifiants par hclwrite
+"cle avec espaces": "valeur"
+"identifiant-avec-tirets": 10
+"clé_accentuée": "test"
+"123_commence_par_chiffre": true
 
-# 5. Listes d'objets (Très fréquent en infrastructure)
-reseaux_virtuels:
-  - nom: "vpc-frontend"
-    cidr: "10.0.0.0/16"
-    actif: true
-    sous_reseaux:
-      - nom: "subnet-public-1"
-        cidr: "10.0.1.0/24"
-        passerelle: "10.0.1.1"
-      - nom: "subnet-public-2"
-        cidr: "10.0.2.0/24"
-        passerelle: "10.0.2.1"
-  - nom: "vpc-backend"
-    cidr: "10.1.0.0/16"
-    actif: true
-    sous_reseaux:
-      - nom: "subnet-prive-1"
-        cidr: "10.1.1.0/24"
-        passerelle: null
-  - nom: "vpc-archive"
-    cidr: "192.168.0.0/16"
-    actif: false
-    sous_reseaux: []
-
-# 6. Mélange final (Dictionnaire contenant liste contenant objet contenant tuple)
+# 7. Structure de sécurité imbriquée
 politiques_securite:
-  regles_pare_feu:
-    - nom: "autoriser-http"
-      priorite: 100
-      action: "allow"
-      sources: ["0.0.0.0/0"]
-      meta_donnees:
-        audite: true
-        tags: ["web", 80, true]
-    - nom: "bloquer-tout"
-      priorite: 999
-      action: "deny"
-      sources: ["0.0.0.0/0"]
-      meta_donnees: {}
+  entrants:
+    - priorite: 100
+      action: "ALLOW"
+      regles:
+        ports: [80, 443]
+        protocoles: ["TCP", "UDP"]
+    - priorite: 200
+      action: "DENY"
+      regles:
+        ports: [0, 65535]
+        protocoles: ["*"]

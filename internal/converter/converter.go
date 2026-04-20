@@ -3,7 +3,9 @@ package converter
 import (
 	"fmt"
 	"sort"
-
+    
+	"regexp"
+	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/zclconf/go-cty/cty"
 	"gopkg.in/yaml.v3"
@@ -31,6 +33,7 @@ func ToHCL2(yamlBytes []byte) ([]byte, error) {
 	// ensuite on parcourt le fichier yaml donné en entré
 	for _, key := range keys {
 		value := yamlData[key] // On récupère la valeur correspondante
+		safeKey := sanitizeKey(key)
 
 		ctyVal, err := convertToCTY(value)
 		if err != nil {
@@ -39,7 +42,16 @@ func ToHCL2(yamlBytes []byte) ([]byte, error) {
 			continue
 		}
 
-		body.SetAttributeValue(key, ctyVal)
+		body.SetAttributeValue(safeKey, ctyVal)
+	}
+	resultBytes := hclFile.Bytes() // On génère les octets
+	
+	parser := hclparse.NewParser()
+	_, diags := parser.ParseHCL(resultBytes, "internal_validation.hcl")
+	
+	// Si notre propre code a généré du HCL invalide, on bloque tout 
+	if diags.HasErrors() {
+		return nil, fmt.Errorf("échec critique: le HCL généré est syntaxiquement invalide. Détails: %s", diags.Error())
 	}
 
 	return hclFile.Bytes(), nil
@@ -103,4 +115,22 @@ func convertToCTY(val interface{}) (cty.Value, error) {
 
 	}
 
+}
+
+// sanitizeKey nettoie une chaîne pour en faire un identifiant HCL valide.
+func sanitizeKey(key string) string {
+	if key == "" {
+		return "cle_vide"
+	}
+	
+	// Remplace tout ce qui n'est pas une lettre, un chiffre, un tiret ou un underscore par "_"
+	re := regexp.MustCompile(`[^a-zA-Z0-9_-]`)
+	safeKey := re.ReplaceAllString(key, "_")
+
+	// Si la clé commence par un chiffre, on ajoute un "_" au début
+	if safeKey[0] >= '0' && safeKey[0] <= '9' {
+		safeKey = "_" + safeKey
+	}
+
+	return safeKey
 }

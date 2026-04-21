@@ -10,28 +10,27 @@ on:
 
 jobs:
   build-and-test:
-    # Le serveur virtuel sur lequel les tests vont tourner
     runs-on: ubuntu-latest
 
     steps:
-    # 1. GitHub récupère ton code
+    # récupérer code
     - name: Checkout du code
       uses: actions/checkout@v4
 
-    # 2. GitHub installe l'environnement Go
+    # installation environnement Go
     - name: Configuration de Go
       uses: actions/setup-go@v5
       with:
         go-version: '1.21' # Assure-toi que cela correspond à la version de ton go.mod
 
-    # 3. Téléchargement des dépendances (yaml.v3, hclwrite, testify)
+    # dépendances 
     - name: Installation des dépendances
       run: go mod download
 
-    # 4. Vérification que le code compile bien
+    # Vérification que le code compile bien
     - name: Build
       run: go build -v ./...
 
-    # 5. Exécution de tous tes tests unitaires (C'est l'étape la plus importante !)
+    #Exécution de tous tes tests unitaires
     - name: Tests Unitaires
       run: go test -v ./...

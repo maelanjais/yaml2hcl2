@@ -49,7 +49,7 @@ func ToHCL2(yamlBytes []byte) ([]byte, error) {
 	parser := hclparse.NewParser()
 	_, diags := parser.ParseHCL(resultBytes, "internal_validation.hcl")
 	
-	// Si notre propre code a généré du HCL invalide, on bloque tout 
+	// Si HCL invalide, on bloque tout 
 	if diags.HasErrors() {
 		return nil, fmt.Errorf("échec critique: le HCL généré est syntaxiquement invalide. Détails: %s", diags.Error())
 	}
@@ -65,6 +65,8 @@ func convertToCTY(val interface{}) (cty.Value, error) {
 
 	switch v := val.(type) {
 
+
+		// cas simple
 	case string:
 		return cty.StringVal(v), nil
 	case int:

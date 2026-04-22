@@ -1,41 +1,94 @@
-# YAML to HCL2 Converter
+# YAML2HCL2 - Système de Plugins de Configuration
 
 ## Description
-Ce projet est un utilitaire de ligne de commande écrit en Go, conçu pour transformer des configurations YAML complexes en fichiers HCL2 (HashiCorp Configuration Language). L'outil garantit un résultat déterministe et syntaxiquement valide, prêt pour une utilisation immédiate avec Terraform ou d'autres outils de l'écosystème HashiCorp.
 
-## Spécifications Techniques
+Ce projet est un utilitaire modulaire écrit en Go, conçu pour analyser, convertir et évaluer des fichiers de configuration. Initialement conçu comme un simple convertisseur YAML vers HCL2, le projet a évolué vers une architecture extensible basée sur le système **`go-plugin` d'HashiCorp**.
 
-| Composant | Technologie | Rôle |
-| :--- | :--- | :--- |
-| Langage | Go 1.21+ | Moteur d'exécution principal |
-| Analyseur YAML | gopkg.in/yaml.v3 | Décodage des fichiers sources |
-| Générateur HCL | hclwrite (v2) | Construction de l'AST et formatage |
-| Validation | hclparse | Validation syntaxique pré-enregistrement |
+Cette architecture permet à l'application principale de charger dynamiquement des sous-processus (plugins) capables de traiter différents formats de fichiers (YAML, HCL) via des appels RPC.
 
-## Fonctionnalités Avancées
+## Architecture
 
-### 1. Robustesse et Auto-Validation
-L'outil intègre une étape de validation interne systématique. Avant toute écriture sur disque, le HCL généré est analysé par le parseur officiel de HashiCorp. Si une anomalie est détectée, le processus est interrompu pour éviter la génération de fichiers corrompus.
+L'application repose sur le modèle de plugin d'HashiCorp (utilisé par Terraform, Vault, etc.) :
+- **Hôte (`main.go`)** : Point d'entrée du programme. Il détecte l'extension du fichier cible, lance le processus binaire du plugin approprié en arrière-plan, et communique avec lui via gRPC/NetRPC.
+- **Interface Partagée (`shared/interface.go`)** : Contient le contrat strict `Converter` que chaque plugin doit implémenter.
+- **Plugins (`plugins/`)** : Exécutables compilés indépendamment qui effectuent le traitement lourd.
 
-### 2. Nettoyage des Identifiants (Sanitization)
-Pour garantir la conformité avec la syntaxe HCL, les clés YAML sont automatiquement traitées :
-- Remplacement des caractères spéciaux et espaces par des underscores (`_`).
-- Préfixage des clés commençant par un chiffre.
-- Gestion des valeurs `null` et des structures vides.
+### Les Plugins Actuels
 
-### 3. Sortie Déterministe
-Toutes les clés sont triées par ordre alphabétique à chaque niveau d'imbrication, assurant que le même YAML produira toujours exactement le même fichier HCL (indispensable pour le versioning Git).
+1. **Plugin YAML (`plugins/yaml/main.go` & `internal/yaml/`)** :
+   - Prend en entrée un fichier YAML.
+   - Construit l'AST (Abstract Syntax Tree) HCL via `hclwrite`.
+   - Effectue une validation syntaxique avec `hclparse` pour garantir un fichier propre.
+   - Génère un fichier de sortie `.hcl`.
 
-## Architecture du Projet
+2. **Plugin HCL (`plugins/hcl/main.go` & `internal/hcl/`)** :
+   - Prend en entrée un fichier HCL.
+   - Construit un `hcl.EvalContext` permettant l'évaluation d'expressions.
+   - Supporte des **variables** (ex: variables d'environnement via l'objet `env`).
+   - Supporte des **fonctions** (ex: `upper()`, `lower()`, `max()`, `min()`).
+   - Évalue la configuration et la restitue sous forme de fichier `.json` pour validation.
 
-- `main.go` : Gestion du flux d'entrée/sortie et interface utilisateur.
-- `internal/converter/` :
-  - `converter.go` : Algorithme récursif de conversion et sanitization.
-  - `converter_test.go` : Suite de 10 tests unitaires intensifs incluant la validation syntaxique.
+---
 
-## Utilisation
+## Guide d'Utilisation et de Test
 
-### Installation
+### Prérequis
+- **Go 1.21+** installé sur votre machine.
+- `make` pour l'utilisation des commandes de compilation (inclus par défaut sur macOS/Linux).
+
+### 1. Compilation du Projet
+
+L'architecture go-plugin nécessite que l'application principale **et** chaque plugin soient compilés en tant que binaires distincts.
+Pour tout compiler d'un seul coup, utilisez la commande `make` :
+
 ```bash
-go mod tidy
-go build -o yaml2hcl
+make
+```
+
+> **Ce que ça fait** :
+> 1. Crée les dossiers nécessaires.
+> 2. Compile le plugin YAML (`plugins/yaml/plugin`).
+> 3. Compile le plugin HCL (`plugins/hcl/plugin`).
+> 4. Compile l'exécutable hôte (`yaml2hcl2` à la racine).
+
+### 2. Tester le Plugin YAML (YAML -> HCL)
+
+Testez la conversion du fichier d'exemple inclus :
+
+```bash
+./yaml2hcl2 testSupfile.yml
+```
+
+**Résultat attendu** :
+Le programme lancera le plugin YAML via RPC, qui générera un fichier nommé `output.hcl` contenant la représentation syntaxique valide de votre YAML. Vous verrez un message :
+`Opération terminée ! Le résultat est disponible dans le fichier 'output.hcl'`
+
+### 3. Tester le Plugin HCL (Évaluation HCL -> JSON)
+
+Testez l'évaluation dynamique de variables et de fonctions :
+
+```bash
+./yaml2hcl2 test.hcl
+```
+
+> *Note : Si vous examinez `test.hcl`, vous verrez qu'il utilise des fonctions comme `upper()` et appelle des variables comme `env.USER`.*
+
+**Résultat attendu** :
+Le programme lancera le plugin HCL, qui évaluera le code et générera un fichier `output.json`.
+Si vous ouvrez `output.json`, vous verrez que les fonctions (ex: "MY-SUPER-PROJECT") et les variables systèmes ont bien été résolues !
+
+### 4. Nettoyage de l'Espace de Travail
+
+Pour supprimer tous les binaires compilés et les fichiers générés par les tests, exécutez simplement :
+
+```bash
+make clean
+```
+
+---
+
+## Pour aller plus loin
+
+- **Ajouter de nouvelles fonctions** : Modifiez `internal/hcl/converter.go` dans la map `Functions` du `hcl.EvalContext` (vous pouvez importer des fonctions depuis `github.com/zclconf/go-cty/cty/function/stdlib`).
+- **Ajouter de nouvelles variables** : Modifiez l'objet passé dans la map `Variables` du contexte.
+- **Ajouter un nouveau plugin** : Créez un nouveau dossier sous `plugins/`, implémentez l'interface `shared.Converter`, compilez-le en tant que binaire, et ajoutez la condition dans `main.go`.

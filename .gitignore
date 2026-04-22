@@ -10,7 +10,7 @@ yaml2hcl
 # Fichiers de sortie de test
 output.hcl
 
-# Dépendances (peuvent être reconstruites via go.mod)
+# Dépendances 
 vendor/
 
 # Fichiers système

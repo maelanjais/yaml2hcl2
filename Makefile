@@ -1,4 +1,4 @@
-.PHONY: all build build-plugins build-main clean
+.PHONY: all build build-plugins build-main clean test
 
 all: build
 
@@ -20,3 +20,8 @@ clean:
 	rm -f plugins/hcl/plugin
 	rm -f yaml2hcl2
 	rm -f output.hcl output.json
+
+test:
+	@echo "==> Running unit tests..."
+	go test ./internal/...
+
